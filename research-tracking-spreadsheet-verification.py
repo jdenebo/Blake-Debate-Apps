@@ -5,13 +5,16 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 
-APP_TOKEN = "xapp-1-A05J1SD9KB4-5657604345715-70dae54cf33f20835c682fc9cd60230cec28a59e75d86ef23a7645d21ded4f0c"
-BOT_TOKEN = "xoxb-478055010406-5637609578848-YKRCn3LSZHHvLnLm6gkpYxPa"
+APP_TOKEN = APP_TOKEN
+#insert your respective tokens
+BOT_TOKEN = BOT_TOKEN
+
+
 app = App(token=BOT_TOKEN)
 
 
-sheet_id = "1FSbqKnuUsgTqCHMvk_9fppVN4IJmwaI1QbXVSEAuoO8"
-sheet_name = "Sheet1"
+sheet_id = #whatever sheet ID you want
+sheet_name = #whatever sheet you want
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
 sheet_data = pd.read_csv(url)
 
