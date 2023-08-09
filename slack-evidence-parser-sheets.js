@@ -11,7 +11,6 @@ var sheet = ss.getSheetByName('Sheet1');
 //paste webhook in if you want to use the webhook messaging method
 var webhook = HOOK;
 
-
 function doPost(e) {
   const payload = JSON.parse(e.postData.contents);
   if (typeof(payload.challenge) !== "undefined") {
@@ -20,11 +19,7 @@ function doPost(e) {
   var last_row = sheet.getLastRow();
 
   if (payload.event.type === "message") {
-  
       if (payload.event.subtype === "file_share") {
-      // handles when a message is sharing a file, will populate sheet accordingly
-
-
 
         //handling file names, vars for pdf
         var names = [];
@@ -38,6 +33,14 @@ function doPost(e) {
             pdf = 1;
           }
         }
+
+        if (!pdf) {
+          var message1 = {"text" : "The PDF is missing, if it is available please delete this post and try again!"};
+          slackPost(message1);
+        } else if (len <= 1) {
+          var message1 = {"text" : "The cards are missing, please delete this post and try again!"}
+          slackPost(message1);
+        } else {
     
         var date = payload.event.ts;
         sheet.getRange(last_row+1, 10).setValue(parseFloat(date));
@@ -65,8 +68,14 @@ function doPost(e) {
 
 
         // description
-        sheet.getRange(last_row+1, 4).setValue(payload.event.text);
-
+        var description_exists = payload.event.text.length;
+        if (!payload.event.text.length) {
+          var message2 = {"text" : "You are missing the description of the file, please EDIT this message to include it in the following format: [Topic(Septober, Nocember, April etc)] - [Year] - [Argument Type(link, impact, etc)] - [Description of Cards]"};
+          slackPost(message2);
+        } else {
+          sheet.getRange(last_row+1, 4).setValue(payload.event.text);
+        }
+      
         //permalink
         var permalink = callWebApi(token, "chat.getPermalink", `?channel=${payload.event.channel}&message_ts=${date}`);
         var data = JSON.parse(permalink.getContentText());
@@ -81,23 +90,26 @@ function doPost(e) {
 
         //description parse
         var split_desc = payload.event.text.split("-");
+        if (split_desc.length < 4 && description_exists) {
+          var message3 = {"text" : "Your description is missing certain elements, please EDIT this message to correct it in the following format: [Topic(Septober, Nocember, April etc)] - [Year] - [Argument Type(link, impact, etc)] - [Description of Cards]"};
+          slackPost(message3);
+        }
+
         sheet.getRange(last_row+1, 7).setValue(split_desc[0].trim() + " " + split_desc[1].trim());
         sheet.getRange(last_row+1, 8).setValue(split_desc[1].trim());
 
 
         // arg type, maybe more work to be done to handle multiple types?
         var type = split_desc[2].trim();
-        if (type == "impact" || type == "Impact" || type == "IMPACT" || type == "i" || type == "I") {
-          sheet.getRange(last_row+1, 9).setValue("Impact");
-        } else if (type == "link" || type == "Link" || type == "LINK" || type == "l" || type == "L") {
-          sheet.getRange(last_row+1, 9).setValue("Link");
-        } else if (type == "IL" || type == "il" || type == "internal link" || type == "INTERNAL LINK" || type == "Il" || type == "iL" || type == "Internal Link" || type == "internal Link" || type == "Internal link") {
-          sheet.getRange(last_row+1, 9).setValue("Internal Link");
-        } else if (type == "UQ" || type == "uq" || type == "uQ" || type == "Uq" || type == "Uniqueness" || type == "uniqueness" || type == "UNIQUENESS" || type.includes("unq") || type.includes("Unq") || type.includes("uniq") || type.includes("Uniq")) {
-          sheet.getRange(last_row+1, 9).setValue("Uniqueness");
-        } else {
-          sheet.getRange(last_row+1, 9).setValue(type);
+        check_arg_type(type, last_row+1);
+        
         }
+  
+
+
+
+
+
       }  else if (payload.event.subtype === "message_changed") {
 
       //changing rows based on message updates
@@ -115,34 +127,58 @@ function doPost(e) {
 
       // arg type, maybe more work to be done to handle multiple types?
       var type = split_desc[2].trim();
-      if (type == "impact" || type == "Impact" || type == "IMPACT" || type == "i" || type == "I") {
-          sheet.getRange(row_to_update, 9).setValue("Impact");
-      } else if (type == "link" || type == "Link" || type == "LINK" || type == "l" || type == "L") {
-          sheet.getRange(row_to_update, 9).setValue("Link");
-      } else if (type == "IL" || type == "il" || type == "internal link" || type == "INTERNAL LINK" || type == "Il" || type == "iL" || type == "Internal Link" || type == "internal Link" || type == "Internal link") {
-          sheet.getRange(row_to_update, 9).setValue("Internal Link");
-      } else if (type == "UQ" || type == "uq" || type == "uQ" || type == "Uq" || type == "Uniqueness" || type == "uniqueness" || type == "UNIQUENESS" || type.includes("unq") || type.includes("Unq") || type.includes("uniq") || type.includes("Uniq")) {
-          sheet.getRange(row_to_update, 9).setValue("Uniqueness");
-      } else {
-          sheet.getRange(row_to_update, 9).setValue(type);
-        }
+      check_arg_type(type, row_to_update)
+
+
+
+
 
     } else if (payload.event.subtype === "message_deleted") {
-        // deletes row in sheet when message is deleted
-    
         var val = payload.event.deleted_ts;
         var row_to_update = val_search(val);
         if (row_to_update) {
           sheet.deleteRows(row_to_update, 1);
       }
+
+
+
+
+
+    } else if (payload.event.subtype === "message_replied") {
+        sheet.getRange("D30").setValue(1000)
+        var parent = val_search(payload.event.message.thread_ts);
+        var ids_arr= [];
+        // for (i=0; i<payload.event.message.reply_count; i++) {
+        //     ids_arr.push()
+        // }
+        sheet.getRange(parent, 13).setValue(payload.event.message.text);
+
     }
    else if (payload.event.type === "file_deleted") {
-
     // deletes spreadsheet inputs if files are deleted
     const row_to_delete = val_search(payload.event.file_id);
     if (row_to_delete) {
       sheet.deleteRows(row_to_delete, 1); }
   }
+  }
+}
+
+
+function check_arg_type(type, row) {
+  if (type == "impact" || type == "Impact" || type == "IMPACT" || type == "i" || type == "I" || type == "IMP" || type == "imp" || type == "Imp") {
+    sheet.getRange(row, 9).setValue("Impact");
+  } else if (type == "link" || type == "Link" || type == "LINK" || type == "l" || type == "L") {
+    sheet.getRange(row, 9).setValue("Link");
+  } else if (type == "IL" || type == "il" || type == "internal link" || type == "INTERNAL LINK" || type == "Il" || type == "iL" || type == "Internal Link" || type == "internal Link" || type == "Internal link") {
+    sheet.getRange(row, 9).setValue("Internal Link");
+  } else if (type == "UQ" || type == "uq" || type == "uQ" || type == "Uq" || type == "Uniqueness" || type == "uniqueness" || type == "UNIQUENESS" || type.includes("unq") || type.includes("Unq") || type.includes("uniq") || type.includes("Uniq")) {
+    sheet.getRange(row, 9).setValue("Uniqueness");
+  } else if (type == "defense" || type == "Defense" || type == "def" || type == "DEF" || type == "DEFENSE" || type == "D" || type == "d"){
+    sheet.getRange(row, 9).setValue("Defense");
+  } else if (type == "impact d" || type == "impact D" || type == "impact defense" || type == "Impact Defense" || type == "Impact d" || type == "Impact D") {
+    shee.getRange(row, 9).setValue("Impact D");
+  } else {
+    sheet.getRange(row, 9).setValue(type);
   }
 }
 
@@ -165,7 +201,6 @@ function slackPost(params) {
     {
       'method' : 'post',
       'contentType': 'application/json',
-      'muteHttpExceptions' : true, 
       'payload' : JSON.stringify(params),
     }
   );
