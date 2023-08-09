@@ -28,7 +28,6 @@ def get_author_and_title(doc):
     # grabbing cite text, finding it by checking for conditions that are exclusive to the cite (parens, DOA, urls etc)
     for i in range(10):
         cite_text = p_sections[i]
-        print(cite_text)
         if ("(" not in cite_text) or ((chr(8220) not in cite_text) and (chr(34) not in cite_text)) or ("http" not in cite_text):
             continue
         else:
@@ -84,8 +83,6 @@ def get_file(event, say):
         with open("new-card.docx" , 'w+b') as f:
                 f.write(bytearray(file_data))
                 check_tup = get_author_and_title("new-card.docx")
-                print(check_tup[0])
-                print(check_tup[1])
                 if check_spreadsheet_title(check_tup[0]) + check_spreadsheet_author(check_tup[1]) > 1:
                      say("This card has already been cut, please DELETE the message with the file in it")
                 
