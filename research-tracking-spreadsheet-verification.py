@@ -15,7 +15,7 @@ app = App(token=BOT_TOKEN)
 
 sheet_id = #whatever sheet ID you want
 sheet_name = #whatever sheet you want
-url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+url = #your spreadsheet url
 sheet_data = pd.read_csv(url)
 
 
