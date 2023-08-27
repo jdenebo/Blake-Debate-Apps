@@ -56,39 +56,51 @@ def get_author_and_title(doc):
 
 def check_spreadsheet_title(word):
     """
-    Checks spreadsheet for the article title, if it is in there, returns 1, if not, returns 0. 
+    Checks spreadsheet for the article title, if it is in there, it returns the row that contains it. If its is not, it returns an empty dataframe.
     """
-    if sheet_data.iloc[:, 3].str.contains(word, case=True).sum() > 0:
-        return 1
-    else:               
-        return 0
+    filtered_df = sheet_data[sheet_data.iloc[:, 3].str.contains(word).fillna(False)]
+    return filtered_df
 
 def check_spreadsheet_author(word):
     """
-    Checks spreadsheet for article author, if it is in there, returns 1, if not, returns 0. 
+    Checks spreadsheet for article author, if it is in there, it returns the row that contains it. If its is not, it returns an empty dataframe.
     """
-    if sheet_data.iloc[:, 0].str.contains(word, case=True).sum() > 0:
-        return 1
-    else:
+    filtered_df = sheet_data[sheet_data.iloc[:, 0].str.contains(word).fillna(False)]
+    if filtered_df.empty:
         return 0
+    else:
+        return filtered_df
 
 @app.event({"type" : "message", "subtype" : "file_share"})
-def get_file(event, say):
-        url = event["files"][0]["url_private"]
-        file_name = event["files"][0]["name"]
+def get_file(event, say, client):
+    if "thread_ts" not in event.keys():
+        username = client.users_profile_get(user=event["user"])
+        first_name = username["profile"]["real_name"].split(" ")[0]
+        docx_counter = 0
+        for file in event["files"]:
+            if file["filetype"] == "docx":
+                docx_counter += 1
+                url = file["url_private"]
+                file_name = event["files"][0]["name"]
+                    
+                #download file
+                r = requests.get(url, headers={'Authorization': 'Bearer %s' % BOT_TOKEN})
+                r.raise_for_status
+                file_data = r.content 
 
-        # download file
-        r = requests.get(url, headers={'Authorization': 'Bearer %s' % BOT_TOKEN})
-        r.raise_for_status
-        file_data = r.content   # get binary content
-
-        # save file to disk
-        with open("new-card.docx" , 'w+b') as f:
-                f.write(bytearray(file_data))
-                check_tup = get_author_and_title("new-card.docx")
-                if check_spreadsheet_title(check_tup[0]) + check_spreadsheet_author(check_tup[1]) > 1:
-                     say("This card has already been cut, please DELETE the message with the file in it")
-                
+                # write and open file in new card doc, check for spreadsheet hits
+                with open("new-card.docx" , 'w+b') as f:
+                    f.write(bytearray(file_data))
+                    check_tup = get_author_and_title("new-card.docx")
+                    spreadsheet_search = check_spreadsheet_title(check_tup[0])
+                    if spreadsheet_search.empty:
+                        say("Please ensure this article is properly claimed in the reserach tracking spreadsheet.")
+                    elif len(spreadsheet_search) > 1:
+                        say("This article has already been claimed or cut, please DELETE the message with the file in it.")
+                    elif spreadsheet_search["Claimed By"].str.contains(first_name).sum() == 0:
+                            say("This article has already been claimed or cut, please DELETE the message with the file in it.")
+        if docx_counter < 1:
+            say("There were no cards in this message")
 
 
 if __name__ == "__main__":
