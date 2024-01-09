@@ -11,16 +11,43 @@ var sheet = ss.getSheetByName('Sheet1');
 //paste webhook in if you want to use the webhook messaging method
 var webhook = HOOK;
 
-function doPost(e) {
-  const payload = JSON.parse(e.postData.contents);
-  if (typeof(payload.challenge) !== "undefined") {
+function doPost (e) {
+  const data = e.postData.contents
+  const payload = JSON.parse(data);
+  if (payload.type == "url_verification") {
     return ack(payload.challenge) }
-  
-  var last_row = sheet.getLastRow();
+  ScriptApp.newTrigger('handlepost').timeBased().after(100).create();
+  const props = PropertiesService.getUserProperties()
+  props.setProperty(String(Date.now()), data)
+  return ContentService.createTextOutput("HTTP 200 OK")
+}
 
+function doGet(e) {
+  return ContentService.createTextOutput("HTTP 200 OK");
+}
+
+function handlepost() {
+  var triggers = ScriptApp.getProjectTriggers();
+  ScriptApp.deleteTrigger(triggers[triggers.length-1])
+  const props = PropertiesService.getUserProperties()
+  if (props.getKeys().length > 0) {
+    var pairs = props.getProperties()
+    for (var key in pairs) {
+      var temp = pairs[key]
+      props.deleteProperty(key)
+      handlePost2(temp)
+    }
+  }
+
+  if (triggers.length > 10) {
+    for (i=5; i<10; i++)
+    ScriptApp.deleteTrigger(triggers[i])
+  }
+}
+function handlePost2(p) {
+ const payload = JSON.parse(p)
   if (payload.event.type === "message") {
-      if (payload.event.subtype === "file_share") {
-
+      if (payload.event.subtype === "file_share" && !("thread_ts" in payload.event)) {
         //handling file names, vars for pdf
         var names = [];
         var ids = [];
@@ -34,78 +61,90 @@ function doPost(e) {
           }
         }
 
-        if (!pdf) {
-          var message1 = {"text" : "The PDF is missing, if it is available please delete this post and try again!"};
-          slackPost(message1);
-        } else if (len <= 1) {
-          var message1 = {"text" : "The cards are missing, please delete this post and try again!"}
-          slackPost(message1);
-        } else {
-    
-        var date = payload.event.ts;
-        sheet.getRange(last_row+1, 10).setValue(parseFloat(date));
-        var user = payload.event.user;
-        sheet.getRange(last_row+1, 11).setValue(user);
+        if (sheet.getRange(2, 10).getValue() != parseFloat(payload.event.ts)) {
 
-        //viewable date set
-        sheet.getRange(last_row+1, 2).setValue(date_time(date));
+          if (!pdf) {
+            var message1 = {"text" : "The PDF is missing, if it is available please delete this post and try again!"};
+            slackPost(message1);
+          } else if (len <= 1) {
+            var message1 = {"text" : "The cards are missing, please delete this post and try again!"}
+            slackPost(message1);
+          } else {
+          
+          sheet.insertRowBefore(2)
+            
+          var date = payload.event.ts;
+          sheet.getRange(2, 10).setValue(parseFloat(date));
+          var user = payload.event.user;
+          sheet.getRange(2, 11).setValue(user);
 
-
-
-        // fill out ids array
-        const id_str = ids.toString();
-        sheet.getRange(last_row+1, 12).setValue(id_str);
+          //viewable date set
+          sheet.getRange(2, 2).setValue(date_time(date));
 
 
-        if (pdf != 0) {
-          sheet.getRange(last_row+1, 3).setValue("YES");
-        } else {
-          sheet.getRange(last_row+1, 3).setValue("NO");
+
+          // fill out ids array
+          const id_str = ids.toString();
+          sheet.getRange(2, 12).setValue(id_str);
+
+
+          if (pdf != 0) {
+            sheet.getRange(2, 3).setValue("YES");
+          } else {
+            sheet.getRange(2, 3).setValue("NO");
+          }
+
+          // setting file name to just the [johnson 22] format
+          // sheet.getRange(2, 1).setValue(names[0].split(".")[0]);
+          if (names[0].includes(".pdf")) {
+            sheet.getRange(2, 1).setValue(names[0].substring(0, names[0].length - 4));
+          } else if (names[0].includes(".docx")) {
+            sheet.getRange(2, 1).setValue(names[0].substring(0, names[0].length - 5));
+          } else {
+            sheet.getRange(2, 1).setValue(names[0]);
         }
 
-        // setting file name to just the [johnson 22] format
-        sheet.getRange(last_row+1, 1).setValue(names[0].split(".")[0]);
 
 
-        // description
-        var description_exists = payload.event.text.length;
-        if (!payload.event.text.length) {
-          var message2 = {"text" : "You are missing the description of the file, please EDIT this message to include it in the following format: [Topic(Septober, Nocember, April etc)] - [Year] - [Argument Type(link, impact, etc)] - [Description of Cards]"};
-          slackPost(message2);
-        } else {
-          sheet.getRange(last_row+1, 4).setValue(payload.event.text);
-        }
-      
-        //permalink
-        var permalink = callWebApi(token, "chat.getPermalink", `?channel=${payload.event.channel}&message_ts=${date}`);
-        var data = JSON.parse(permalink.getContentText());
-        sheet.getRange(last_row+1, 6).setValue(data.permalink);
-
-
-        //user conversions
-        var username = callWebApi(token, "users.profile.get", `?user=${user}`);
-        var data2 = JSON.parse(username.getContentText());
-        sheet.getRange(last_row+1, 5).setValue(data2.profile.real_name);
-
-
-        //description parse
-        var split_desc = payload.event.text.split("-");
-        if (split_desc.length < 4 && description_exists) {
-          var message3 = {"text" : "Your description is missing certain elements, please EDIT this message to correct it in the following format: [Topic(Septober, Nocember, April etc)] - [Year] - [Argument Type(link, impact, etc)] - [Description of Cards]"};
-          slackPost(message3);
-        }
-
-        sheet.getRange(last_row+1, 7).setValue(split_desc[0].trim() + " " + split_desc[1].trim());
-        sheet.getRange(last_row+1, 8).setValue(split_desc[1].trim());
-
-
-        // arg type, maybe more work to be done to handle multiple types?
-        var type = split_desc[2].trim();
-        check_arg_type(type, last_row+1);
+          // description
+          var description_exists = payload.event.text.length;
+          if (!payload.event.text.length) {
+            var message2 = {"text" : "You are missing the description of the file, please EDIT this message to include it in the following format: [Topic(Septober, Nocember, April etc)] - [Year] - [Argument Type(link, impact, etc)] - [Description of Cards]"};
+            slackPost(message2);
+          } else {
+            sheet.getRange(2, 4).setValue(payload.event.text);
+          }
         
-        }
-  
+          //permalink
+          var permalink = callWebApi(token, "chat.getPermalink", `?channel=${payload.event.channel}&message_ts=${date}`);
+          var data = JSON.parse(permalink.getContentText());
+          sheet.getRange(2, 6).setValue(data.permalink);
 
+
+          //user conversions
+          var username = callWebApi(token, "users.profile.get", `?user=${user}`);
+          var data2 = JSON.parse(username.getContentText());
+          sheet.getRange(2, 5).setValue(data2.profile.real_name);
+
+
+          //description parse
+          var split_desc = payload.event.text.split("-");
+          if (split_desc.length < 4 && description_exists) {
+            var message3 = {"text" : "Your description is missing certain elements, please EDIT this message to correct it in the following format: [Topic(Septober, Nocember, April etc)] - [Year] - [Argument Type(link, impact, etc)] - [Description of Cards]"};
+            slackPost(message3);
+          } else {
+
+          sheet.getRange(2, 7).setValue(split_desc[0].trim() + " " + split_desc[1].trim());
+          sheet.getRange(2, 8).setValue(split_desc[1].trim());
+
+
+          // arg type, maybe more work to be done to handle multiple types?
+          var type = split_desc[2].trim();
+          check_arg_type(type, 2);
+          }
+          }
+    
+        }
 
 
 
@@ -121,14 +160,15 @@ function doPost(e) {
 
       //description parse
       var split_desc = payload.event.message.text.split("-");
-      sheet.getRange(row_to_update, 7).setValue(split_desc[0].trim() + " " + split_desc[1].trim());
-      sheet.getRange(row_to_update, 8).setValue(split_desc[1].trim());
+      if (split_desc.length > 1) {
+        sheet.getRange(row_to_update, 7).setValue(split_desc[0].trim() + " " + split_desc[1].trim());
+        sheet.getRange(row_to_update, 8).setValue(split_desc[1].trim());
 
 
-      // arg type, maybe more work to be done to handle multiple types?
-      var type = split_desc[2].trim();
-      check_arg_type(type, row_to_update)
-
+        // arg type, maybe more work to be done to handle multiple types?
+        var type = split_desc[2].trim();
+        check_arg_type(type, row_to_update)
+      }
 
 
 
@@ -137,29 +177,19 @@ function doPost(e) {
         var val = payload.event.deleted_ts;
         var row_to_update = val_search(val);
         if (row_to_update) {
-          sheet.deleteRows(row_to_update, 1);
+          sheet.deleteRow(row_to_update)
       }
 
 
 
 
 
-    } else if (payload.event.subtype === "message_replied") {
-        sheet.getRange("D30").setValue(1000)
-        var parent = val_search(payload.event.message.thread_ts);
-        var ids_arr= [];
-        // for (i=0; i<payload.event.message.reply_count; i++) {
-        //     ids_arr.push()
-        // }
-        sheet.getRange(parent, 13).setValue(payload.event.message.text);
+    } else if (payload.event.subtype === "file_share" && ("thread_ts" in payload.event)) {
+        var parent = val_search(payload.event.thread_ts);
+        if (parent > 0)
+          sheet.getRange(parent, 13).setValue(payload.event.text);
 
     }
-   else if (payload.event.type === "file_deleted") {
-    // deletes spreadsheet inputs if files are deleted
-    const row_to_delete = val_search(payload.event.file_id);
-    if (row_to_delete) {
-      sheet.deleteRows(row_to_delete, 1); }
-  }
   }
 }
 
@@ -228,20 +258,22 @@ function date_time (t) {
 
 
 function val_search (v) {
-  const dataRange = sheet.getDataRange();
+  const dataRange = sheet.getRange("J:J");
   const values = dataRange.getValues();
-  const columnIndex = 9 // INDEX OF COLUMN FOR COMPARISON CELL
   const matchText = parseFloat(v);
-  const index = values.findIndex(row => row[columnIndex] === matchText)
-  const rowNumber = index + 1
+  var row_number = -1
+  for (i=1; i<10; i++) {
+    if (values[i][0] == matchText) {
+      row_number=i
+      break
+    }
+  }
+  const rowNumber = row_number + 1
   return rowNumber
 }
 
+
 function ack(payload) {
-  if (typeof payload === "string") {
-    return ContentService.createTextOutput(payload);
-  } else {
-    return ContentService.createTextOutput(JSON.stringify(payload))
-               .setMimeType(ContentService.MimeType.JSON);
-  }
+  const reply = "HTTP 200 OK\nContent-type: text/plain\n" + payload
+  return ContentService.createTextOutput(reply);
 }
