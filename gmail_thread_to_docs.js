@@ -38,12 +38,6 @@ function myFunction() {
         for (var z=0; z < messages.length; z++) {
           var message = messages[z];
           if(message.isStarred()) {
-            // if (sheet1.getRange(2,8).isBlank()) {
-            //   sheet1.getRange(2,8).setValue(messages[z].getFrom());
-            // } else {
-            // var from_str = sheet1.getRange(2,8).getValue();
-            // sheet1.getRange(2,8).setValue(from_str + ", " + messages[z].getFrom());
-            // }
             var body = message.getBody();
             var body_blob = Utilities.newBlob("").setDataFromString(body, "UTF-8").setContentType("text/html").setName("Email Body" + z + " - " + subject);
             var attachments = message.getAttachments();
