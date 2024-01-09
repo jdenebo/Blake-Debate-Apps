@@ -1,38 +1,49 @@
 const spreadsheet2 = SpreadsheetApp.getActiveSpreadsheet();
 const sheet2 = spreadsheet2.getActiveSheet();
 
+
 function myFunction() {
-  const unreads = GmailApp.search("label:debate-docs-chains AND is:starred"); //labels are customaizable
-  var blake_docs_folder = DriveApp.getFolderById("INSERT YOUR OWN FOLDER ID");
+  const unreads = GmailApp.search("label:debate-docs-chains AND is:starred");
+  var blake_docs_folder = DriveApp.getFolderById("1EA3eXydbp-HEqn5_n0VFBqffCB7p_TAt");
 
   if (unreads.length > 0) {
     for (var i=0; i < unreads.length; i++) {
       var thread = unreads[i];
       if (thread.hasStarredMessages()) {
         var subject = thread.getFirstMessageSubject();
+        if (subject.startsWith("[Blake Docs] ")) {
+            subject = subject.replace("[Blake Docs] ", "")
+          }
         var messages = thread.getMessages();
-        var threadIDs = sheet2.getRange('E:E').getValues();
+        var threadIDs = sheet1.getRange('E:E').getValues();
         var threadIDflat = threadIDs.map(function(row) {return row[0];});
         if (threadIDflat.includes(thread.getId())){
           var matching_row = val_search(thread.getId());
-          var folderId = sheet2.getRange(matching_row, 4).getValue();
+          var folderId = sheet1.getRange(matching_row, 4).getValue();
           var round = DriveApp.getFolderById(folderId);
         
         } else {
           var round = DriveApp.createFolder(subject);
           round.moveTo(blake_docs_folder);
           var round_url = round.getUrl();
-          sheet2.insertRowBefore(2);
-          sheet2.getRange(2, 3).setValue(round_url);
-          sheet2.getRange(2, 2).setValue(subject);
-          sheet2.getRange(2, 1).setValue(messages[0].getDate());
-          sheet2.getRange(2, 4).setValue(round.getId());
-          sheet2.getRange(2, 5).setValue(thread.getId());
+          sheet1.insertRowBefore(2);
+          sheet1.getRange(2, 3).setValue(round_url);
+          sheet1.getRange(2, 2).setValue(subject);
+          sheet1.getRange(2, 1).setValue(messages[0].getDate());
+          sheet1.getRange(2, 4).setValue(round.getId());
+          sheet1.getRange(2, 5).setValue(thread.getId());
+          sheet1.getRange(2,7).setValue(messages[0].getTo());
         }
-
+  
         for (var z=0; z < messages.length; z++) {
           var message = messages[z];
           if(message.isStarred()) {
+            // if (sheet1.getRange(2,8).isBlank()) {
+            //   sheet1.getRange(2,8).setValue(messages[z].getFrom());
+            // } else {
+            // var from_str = sheet1.getRange(2,8).getValue();
+            // sheet1.getRange(2,8).setValue(from_str + ", " + messages[z].getFrom());
+            // }
             var body = message.getBody();
             var body_blob = Utilities.newBlob("").setDataFromString(body, "UTF-8").setContentType("text/html").setName("Email Body" + z + " - " + subject);
             var attachments = message.getAttachments();
@@ -54,7 +65,7 @@ function myFunction() {
 }
 
 function val_search (v) {
-  const dataRange = sheet2.getDataRange();
+  const dataRange = sheet1.getDataRange();
   const values = dataRange.getValues();
   const columnIndex = 4 // INDEX OF COLUMN FOR COMPARISON CELL
   const matchText = v;
