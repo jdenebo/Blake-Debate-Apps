@@ -4,7 +4,7 @@ const sheet2 = spreadsheet2.getActiveSheet();
 
 function myFunction() {
   const unreads = GmailApp.search("label:debate-docs-chains AND is:starred");
-  var blake_docs_folder = DriveApp.getFolderById("1EA3eXydbp-HEqn5_n0VFBqffCB7p_TAt");
+  var blake_docs_folder = DriveApp.getFolderById(FOLDER_ID);
 
   if (unreads.length > 0) {
     for (var i=0; i < unreads.length; i++) {
