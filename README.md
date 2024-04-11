@@ -15,7 +15,7 @@ Finally, it will remind the students when it catches mistakes at any point in th
 
 This will be to automate feedback. It will pick up messages starting with a certain feedback trigger (maybe "FEEDBACK:") in each team channel and populate the proper document with that feedback so students have it all in one place. 
 
-## Doc Parser
+## Doc Parser (slack-evidence-parser.py)
 
 Will parse word documents to catch cite errors, formatting errors, etc. Is integrated with slack app to immediately return feedback for students. Additionally, it will check research tracking spreadsheet to make sure that the article has not already been claimed. Will also count how many cards are there and update spreadsheet with card counts for each student to track work volume. 
 
