@@ -36,7 +36,7 @@ You will also want a research tracking spreadsheet. Here (https://docs.google.co
 
 Additionally, cites should end with the initials of the person who cut the card. For example, mine end with )JDE. This bot will also assign the number of cards in the document to those initials. It will query a spreadsheet that keeps track of article and card counters per initial and update those values to count the number of cards cut by each kid. This spreadsheet needs to be created and maintained by you. I have it set up with the names and initials in first two columns, and then column sets for each topic to track articles/card counts. I will upload a template of this at some point in the future. 
 
-## Email Parser (gmail_thread_to_docs.js)
+## Email Parser (GmailThreadToDocs.js)
 
 This does not require a bot, and simply is done through google app script. The only thing needed is to edit the script to check for whatever label you send email chains to. We have a google group that is put on every chain and I have it redirect emails to my debate email, and sort them into a label while starring them. The script will look into threads under that label that are starred and process them. Simply make a google drive folder and it will load every thread into a unique folder within it. I set a trigger to update it every 10 minutes. 
 
