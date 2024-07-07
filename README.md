@@ -28,7 +28,7 @@ So an example would look like: Round Feedback: Practice Round 6.6.24 - 1st Aff B
 <img width="1642" alt="image" src="https://github.com/jdenebo/Blake-Debate-Apps/assets/114824938/ccd5eca9-158b-4025-b154-2ea8437eb2d7">
 
 
-## Doc Parser (research-tracking-spreadsheet-verification.py/research-verification-card-count.js)
+## Doc Parser (ResearchTrackingVerification.py/research-verification-card-count.js)
 
 As with before, you should make a new bot and send HTTP requests over either slack bolt or google app script (depending on desktop vs web version). Will parse word documents to catch cite errors, formatting errors, etc. Is integrated with slack app to immediately return feedback for students. Additionally, it will check a research tracking spreadsheet to make sure that the article has not already been claimed. Will also count how many cards are there and update spreadsheet with card counts for each student to track work volume. This should just be in the same evidence channel as the tracking sheet bot. 
 
