@@ -5,7 +5,7 @@ Repository for code used for email parsers, slack/google sheets integration on g
 
 The slack integration portion requires the team have created a slack workspace, ideally one with the pro version (for permanent cloud storage of files). Once that has been created, follow the instructions on the slack website to create an app. We want the created app to have very little functionality, it serves exclusively to send HTTP requests to the Google Script when events occur, so event subscriptions (and the associated permissions) are all the functionality that is needed.
 
-### Evidence Tracking Sheet (slack-evidence-parser-sheets.js)
+### Evidence Tracking Sheet (SlackEvidenceTracking.js)
 
 This will handle slack messages that need to be documented in the evidence mastersheet, so any message with a file attached. Will parse descriptions for topic sorting, as well as information about the message (who sent it, when they sent it, what files it included, a link to the files etc) and populate the spreadsheet accordingly. Will also support edited messages, deleted messages, and replies. It will catch mistakes in this process and remind students to fix those mistakes. I reccommend making an evidence channel in slack and putting the bot in there. Messages to the channel should be in the following format: 
 
