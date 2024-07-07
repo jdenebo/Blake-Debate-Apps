@@ -1,0 +1,1 @@
+The WebVersion of the app is intended to be one that can be entirely deployed through the cloud using Google App Script (to ensure free usage of the application). In summary, all functionality described will run through SlackApps and Google App Scripts to ensure development is possible while tournament travel is occuring. 
